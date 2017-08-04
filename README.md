@@ -1,5 +1,5 @@
 # `Lem`
-_Kind of like [Ulam](https://github.com/DaveAckley/ULAM), but named after a different Stanislaw.
+_Kind of like [Ulam](https://github.com/DaveAckley/ULAM), but named after a different Stanislaw._
 
 
 ## Quick Console Demo
