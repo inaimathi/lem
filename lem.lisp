@@ -11,7 +11,8 @@
    (spaces :reader spaces :initarg :spaces :initform (make-hash-table :test 'equal))))
 
 (defclass unit ()
-  ((state :reader state :initarg :state :initform (make-hash-table))
+  ((unit-type :reader unit-type :initarg :unit-type :initform nil)
+   (state :reader state :initarg :state :initform (make-hash-table))
    (behavior
     :reader behavior :initarg :behavior
     :initform (lambda (neighborhood)
@@ -48,7 +49,8 @@
   (let ((neighborhood (gensym "NEIGH")))
     `(progn
        (defclass ,name (unit)
-	 ((behavior
+	 ((unit-type :initform ,(intern (symbol-name name) :keyword))
+	  (behavior
 	   :initform
 	   (lambda (,neighborhood)
 	     (flet ((neighbor (x y) (get-neighbor ,neighborhood x y)))
@@ -67,6 +69,20 @@
     (unless (= 0 position)
       (spawn-in! (neighbor 1 0) self :position (- position 1)))))
 
+(define-machine box
+  (let ((x (get-state self :x 0))
+	(y (get-state self :y 0)))
+    (when (and (> 10 x) (or (= y 0) (= y 10)))
+      (spawn-in! (neighbor -1 0) self :x (+ x 1) :y y))
+    (unless (= 0 x)
+      (when (or (= y 0) (= y 10))
+	(spawn-in! (neighbor 1 0) self :x (- x 1) :y y)))
+    (when (and (> 10 y) (or (= x 0) (= x 10)))
+      (spawn-in! (neighbor 0 -1) self :x x :y (+ y 1)))
+    (unless (= 0 y)
+      (when (or (= x 0) (= x 10))
+	(spawn-in! (neighbor 0 1) self :x x :y (- y 1))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; Grid Simulation
 (defun make-grid (w h)
@@ -76,6 +92,12 @@
    (loop for x from 0 repeat w
       collect (loop for y from 0 repeat h
 		 collect (make-instance 'grid-space)))))
+
+(defun grid-width (grid)
+  (first (array-dimensions grid)))
+
+(defun grid-height (grid)
+  (second (array-dimensions grid)))
 
 (defun get-cell (grid x y)
   (aref grid x y))

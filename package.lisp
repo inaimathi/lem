@@ -4,8 +4,8 @@
   (:use #:cl)
   (:export
    :define-machine
-   :get-state :set-state! :empty! :move-to! :spawn-in!
+   :get-state :set-state! :empty! :empty? :occupant :unit-type :move-to! :spawn-in!
 
-   :make-grid :seed! :show! :sshow! :play!
+   :make-grid :grid-width :grid-height :get-cell :step-grid! :seed! :show! :sshow! :play!
 
-   :ray :line))
+   :ray :line :box))
