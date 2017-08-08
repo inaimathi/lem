@@ -11,13 +11,15 @@
    (spaces :reader spaces :initarg :spaces :initform (make-hash-table :test 'equal))))
 
 (defclass unit ()
-  ((unit-type :reader unit-type :initarg :unit-type :initform nil)
-   (state :reader state :initarg :state :initform (make-hash-table))
+  ((state :reader state :initarg :state :initform (make-hash-table))
    (behavior
     :reader behavior :initarg :behavior
     :initform (lambda (neighborhood)
 		(declare (ignore neighborhood))
 		nil))))
+
+(defmethod unit-type ((thing unit))
+  (class-name (class-of thing)))
 
 (defmethod get-state ((thing unit) (key symbol) &optional default)
   (gethash key (state thing) default))
@@ -37,7 +39,7 @@
 (defmethod spawn-in! ((void null) (thing unit) &rest state-k/v-pairs) nil)
 (defmethod spawn-in! ((grid-space grid-space) (thing unit) &rest state-k/v-pairs)
   (let ((u (make-instance
-	    'unit :behavior (behavior thing)
+	    (class-name (class-of thing)) :behavior (behavior thing)
 	    :state (alexandria:plist-hash-table state-k/v-pairs))))
     ;; TODO - inherit state from thing
     (setf (occupant grid-space) u)
@@ -49,8 +51,7 @@
   (let ((neighborhood (gensym "NEIGH")))
     `(progn
        (defclass ,name (unit)
-	 ((unit-type :initform ,(intern (symbol-name name) :keyword))
-	  (behavior
+	 ((behavior
 	   :initform
 	   (lambda (,neighborhood)
 	     (flet ((neighbor (x y) (get-neighbor ,neighborhood x y)))
