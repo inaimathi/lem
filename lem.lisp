@@ -44,6 +44,10 @@
     ;; TODO - inherit state from thing
     (setf (occupant grid-space) u)
     nil))
+(defmethod spawn-in! ((grid-space grid-space) (thing symbol) &rest state-k/v-pairs)
+  (setf (occupant grid-space)
+	(apply (fdefinition thing) state-k/v-pairs))
+  nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; Machine definition
@@ -57,7 +61,8 @@
 	     (flet ((neighbor (x y) (get-neighbor ,neighborhood x y)))
 	       (let ((self (occupant (neighbor 0 0))))
 		 ,@body))))))
-       (defun ,name () (make-instance ',name)))))
+       (defun ,name (&rest state-k/v-pairs)
+	 (make-instance ',name :state (alexandria:plist-hash-table state-k/v-pairs))))))
 
 ;;;;; Specific machines
 (define-machine ray
