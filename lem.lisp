@@ -12,6 +12,7 @@
 
 (defclass unit ()
   ((state :reader state :initarg :state :initform (make-hash-table))
+   (code :reader code :initarg :code :initform nil)
    (behavior
     :reader behavior :initarg :behavior
     :initform (lambda (neighborhood)
@@ -39,7 +40,7 @@
 (defmethod spawn-in! ((void null) (thing unit) &rest state-k/v-pairs) nil)
 (defmethod spawn-in! ((grid-space grid-space) (thing unit) &rest state-k/v-pairs)
   (let ((u (make-instance
-	    (class-name (class-of thing)) :behavior (behavior thing)
+	    (class-name (class-of thing)) :code (code thing) :behavior (behavior thing)
 	    :state (alexandria:plist-hash-table state-k/v-pairs))))
     ;; TODO - inherit state from thing
     (setf (occupant grid-space) u)
@@ -55,11 +56,14 @@
   (let ((neighborhood (gensym "NEIGH")))
     `(progn
        (defclass ,name (unit)
-	 ((behavior
+	 ((code :initform ',body)
+	  (behavior
 	   :initform
 	   (lambda (,neighborhood)
 	     (flet ((neighbor (x y) (get-neighbor ,neighborhood x y)))
-	       (let ((self (occupant (neighbor 0 0))))
+	       (let* ((here (neighbor 0 0))
+		      (self (occupant here)))
+		 (declare (ignorable here self))
 		 ,@body))))))
        (defun ,name (&rest state-k/v-pairs)
 	 (make-instance ',name :state (alexandria:plist-hash-table state-k/v-pairs))))))
@@ -121,18 +125,26 @@
     nil))
 
 ;;; Neighborhoods
+(defparameter n*von-neumann
+  '((-1 0) (1 0) (0 1) (0 -1)))
+(defparameter n*moore
+  (loop for x in (list -1 0 1)
+     append (loop for y in (list -1 0 1)
+	       collect (list x y))))
+(defparameter n*extended
+  (loop for x from -3 to 3 append
+       (loop for y from -3 to 3
+	  when (>= 4 (+ (abs x) (abs y)))
+	  collect (list x y))))
+
 (defun get-neighbor (neighborhood x y)
   (cdr (assoc (cons x y) neighborhood :test #'equal)))
 
 (defun neighborhood-of (grid x y)
-  (let ((deltas (loop for x from -3 to 3 append
-		     (loop for y from -3 to 3
-			when (>= 4 (+ (abs x) (abs y)))
-			collect (cons x y)))))
-    (loop for (xd . yd) in deltas
-       for new-x = (+ xd x) for new-y = (+ yd y)
-       when (array-in-bounds-p grid new-x new-y)
-       collect (cons (cons xd yd) (get-cell grid new-x new-y)))))
+  (loop for (xd yd) in n*extended
+     for new-x = (+ xd x) for new-y = (+ yd y)
+     when (array-in-bounds-p grid new-x new-y)
+     collect (cons (cons xd yd) (get-cell grid new-x new-y))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; Console display basics
