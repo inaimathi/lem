@@ -29,6 +29,7 @@
 
 (defmethod empty? ((grid-space grid-space))
   (null (occupant grid-space)))
+(defmethod empty! (thing) nil)
 (defmethod empty! ((grid-space grid-space))
   (setf (occupant grid-space) nil))
 
