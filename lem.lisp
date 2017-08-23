@@ -5,11 +5,6 @@
 (defclass grid-space ()
   ((occupant :accessor occupant :initarg :occupant :initform nil)))
 
-(defclass grid ()
-  ((width :reader width :initarg :width :initform 30)
-   (height :reader height :initarg :height :initform 60)
-   (spaces :reader spaces :initarg :spaces :initform (make-hash-table :test 'equal))))
-
 (defclass unit ()
   ((state :reader state :initarg :state :initform (make-hash-table))
    (code :reader code :initarg :code :initform nil)
@@ -96,34 +91,41 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; Grid Simulation
+(defclass grid ()
+  ((width :reader width :initarg :width :initform 30)
+   (height :reader height :initarg :height :initform 60)
+   (legend :reader legend :initarg :legend :initform (make-hash-table :test 'eql))
+   (spaces :reader spaces :initarg :spaces
+	   :initform (make-array
+		      (list 30 60)
+		      :initial-contents
+		      (loop for x from 0 repeat 30
+			 collect (loop for y from 0 repeat 60
+				    collect (make-instance 'grid-space)))))))
+
+;; FIXME - all of the below should expect/emit `grid` instead of a 2D array
+
 (defun make-grid (w h)
-  (make-array
-   (list w h)
-   :initial-contents
-   (loop for x from 0 repeat w
-      collect (loop for y from 0 repeat h
-		 collect (make-instance 'grid-space)))))
+  (let ((arr (make-array
+	      (list w h)
+	      :initial-contents
+	      (loop for x from 0 repeat w
+		 collect (loop for y from 0 repeat h
+			    collect (make-instance 'grid-space))))))
+    (make-instance 'grid :spaces arr :width w :height h)))
 
-(defun grid-width (grid)
-  (first (array-dimensions grid)))
+(defmethod get-cell ((grid grid) x y)
+  (aref (spaces grid) x y))
 
-(defun grid-height (grid)
-  (second (array-dimensions grid)))
-
-(defun get-cell (grid x y)
-  (aref grid x y))
-
-(defun step-grid! (sim-grid)
-  (let* ((ds (array-dimensions sim-grid))
-	 (w (first ds)) (h (second ds)))
-    (loop for y from 0 to (- h 1)
-       do (loop for x from 0 to (- w 1)
-	     for g = (get-cell sim-grid x y)
-	     unless (empty? g)
-	     do (funcall
-		 (behavior (occupant g))
-		 (neighborhood-of sim-grid x y))))
-    nil))
+(defmethod step! ((sim-grid grid))
+  (loop for y from 0 repeat (height sim-grid)
+     do (loop for x from 0 repeat (width sim-grid)
+	   for g = (get-cell sim-grid x y)
+	   unless (empty? g)
+	   do (funcall
+	       (behavior (occupant g))
+	       (neighborhood-of sim-grid x y))))
+  nil)
 
 ;;; Neighborhoods
 (defparameter n*von-neumann
@@ -141,40 +143,41 @@
 (defun get-neighbor (neighborhood x y)
   (cdr (assoc (cons x y) neighborhood :test #'equal)))
 
-(defun neighborhood-of (grid x y)
+(defmethod neighborhood-of ((grid grid) x y)
   (loop for (xd yd) in n*extended
      for new-x = (+ xd x) for new-y = (+ yd y)
-     when (array-in-bounds-p grid new-x new-y)
+     when (array-in-bounds-p (spaces grid) new-x new-y)
      collect (cons (cons xd yd) (get-cell grid new-x new-y))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;; Console display basics
+(defmethod ->ascii ((u unit))
+  (or (get-state u :ascii) "+"))
+
 (defmethod show ((u unit) &key (stream *standard-output*))
-  (format stream (or (get-state u :ascii) "+")))
+  (format stream (->ascii u)))
 
 (defmethod show ((g grid-space) &key (stream *standard-output*))
   (if (empty? g)
       (format stream ".")
       (show (occupant g) :stream stream)))
 
-(defun show! (sim-grid)
-  (let* ((ds (array-dimensions sim-grid))
-	 (w (first ds)) (h (second ds)))
-    (loop for y from 0 to (- h 1)
-       do (loop for x from 0 to (- w 1)
-	       do (show (get-cell sim-grid x y)))
-       do (format t "~%"))
-    (format t "~%~%")))
+(defmethod show! ((sim-grid grid))
+  (loop for y from 0 repeat (height sim-grid)
+     do (loop for x from 0 repeat (width sim-grid)
+	   do (show (get-cell sim-grid x y)))
+     do (format t "~%"))
+  (format t "~%~%"))
 
 ;;; Console interaction basics
-(defun seed! (sim-grid x y thing)
+(defmethod seed! ((sim-grid grid) x y thing)
   (spawn-in! (get-cell sim-grid x y) thing))
 
-(defun sshow! (sim-grid)
-  (step-grid! sim-grid)
+(defmethod sshow! ((sim-grid grid))
+  (step! sim-grid)
   (show! sim-grid))
 
-(defun play! (sim-grid &key (delay 1))
+(defmethod play! ((sim-grid grid) &key (delay 1))
   (loop
      do (sshow! sim-grid)
      do (sleep delay)))
