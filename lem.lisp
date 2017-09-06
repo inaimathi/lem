@@ -22,9 +22,10 @@
 (defmethod set-state! ((thing unit) (key symbol) value)
   (setf (gethash key (state thing)) value))
 
+(defmethod empty? ((void null)) nil)
 (defmethod empty? ((grid-space grid-space))
   (null (occupant grid-space)))
-(defmethod empty! (thing) nil)
+(defmethod empty! ((void null)) nil)
 (defmethod empty! ((grid-space grid-space))
   (setf (occupant grid-space) nil))
 
