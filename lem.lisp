@@ -136,8 +136,8 @@
      append (loop for y in (list -1 0 1)
 	       collect (list x y))))
 (defparameter n*extended
-  (loop for x from -3 to 3 append
-       (loop for y from -3 to 3
+  (loop for x from -4 to 4 append
+       (loop for y from -4 to 4
 	  when (>= 4 (+ (abs x) (abs y)))
 	  collect (list x y))))
 
