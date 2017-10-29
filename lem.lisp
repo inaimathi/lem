@@ -118,14 +118,17 @@
 (defmethod get-cell ((grid grid) x y)
   (aref (spaces grid) x y))
 
+(defun shuffle! (lst) (sort lst #'< :key (lambda (v) (declare (ignore v)) (random 1.0))))
+
 (defmethod step! ((sim-grid grid))
-  (loop for y from 0 repeat (height sim-grid)
-     do (loop for x from 0 repeat (width sim-grid)
-	   for g = (get-cell sim-grid x y)
-	   unless (empty? g)
-	   do (funcall
-	       (behavior (occupant g))
-	       (neighborhood-of sim-grid x y))))
+  (loop for (x . y) in (shuffle!
+			(loop for y from 0 repeat (height sim-grid)
+			   append (loop for x from 0 repeat (width sim-grid) collect (cons x y))))
+     for g = (get-cell sim-grid x y)
+     unless (empty? g)
+     do (funcall
+	 (behavior (occupant g))
+	 (neighborhood-of sim-grid x y)))
   nil)
 
 ;;; Neighborhoods
